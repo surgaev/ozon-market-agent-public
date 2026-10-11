@@ -1,0 +1,83 @@
+Metadata-Version: 2.4
+Name: ozon-agent
+Version: 0.1.0
+Summary: Аналитика продавца Ozon: юнит-экономика по SKU из начислений и отчёта о реализации, остатки FBO/FBS, возвраты → Excel-отчёт
+License-Expression: MIT
+Project-URL: Repository, https://github.com/surgaev/ozon-market-agent-public
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.31.0
+Requires-Dist: openpyxl>=3.1.2
+Requires-Dist: beautifulsoup4>=4.12.0
+Requires-Dist: python-dateutil>=2.8.2
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: numpy>=1.24.0
+Dynamic: license-file
+
+# ozon-agent — аналитика продавца Ozon
+
+Агент аналитики для продавца на Ozon. Собирает данные из Seller API и ручных
+выгрузок кабинета и строит Excel-отчёт: сколько реально зарабатывает каждый
+артикул после комиссии, логистики, эквайринга, продвижения, себестоимости и налога.
+
+## Что в отчёте
+
+- **Юнит-экономика** — на штуку и за период по каждому offer_id и каналу (FBO/FBS):
+  выручка, комиссия, логистика (в т.ч. возвратов), прочие услуги с расшифровкой,
+  прибыль и маржа. Себестоимость списывается только с выкупленных штук.
+- **Возвраты** — детально по выгрузке «Возвраты FBS и FBO».
+- **Продажи по дням**, **остатки FBO/FBS** с прогнозом «на сколько дней хватит».
+- **Промо «Звёздные товары»**, **логистика по регионам** (кластеры доставки),
+  **здоровье карточек**.
+- Опционально — сравнение прибыли на штуку с Яндекс Маркетом, если рядом лежит
+  отчёт yandex-market-agent-public (соседний проект того же автора).
+
+## Откуда деньги
+
+С 09.2026 Ozon отключил `/v3/finance/transaction/*` — замены с разбивкой услуг по
+SKU в API нет. Поэтому агент гибридный:
+
+1. **«Отчёт по начислениям»** из кабинета (Финансы → Начисления → Скачать) —
+   полная экономика по SKU. Скачать в папку загрузок перед запуском, агент найдёт
+   самый свежий файл по маске.
+2. **Отчёт о реализации** (`/v2/finance/realization`, только закрытые месяцы) —
+   продажи и комиссия по API. Продажи, которых ещё нет в выгрузке, показываются
+   жёлтыми строками «API»: без логистики и услуг, т.## Установка одной командой
+
+Нужен [uv](https://docs.astral.sh/uv/) (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
+
+```bash
+uv tool install git+https://github.com/surgaev/ozon-market-agent-public
+ozon-agent init
+```
+
+`init` создаст в `~/.ozon-agent/` два файла:
+
+- `.env` — Client-Id и Api-Key из кабинета (Настройки → Seller API);
+- `cost_prices.csv` — закупочные цены: `offer_id,цена`, можно править в Excel.
+  Префикс покрывает все варианты: `ABC123` → `ABC123-red`, `ABC123-xl`.
+
+Заполните их, скачайте свежий «Отчёт по начислениям» в `~/Downloads` и запускайте:
+
+```bash
+ozon-agent run --days 30    # отчёт за 30 дней по вчера → ~/Downloads/ozon_report_ГГГГ-ММ-ДД.xlsx
+ozon-agent run --en0        # macOS: в обход VPN, если он режет api-seller.ozon.ru
+```
+
+Попробовать без установки: `uvx --from git+https://github.com/surgaev/ozon-market-agent-public ozon-agent init`.
+Обновиться: `uv tool upgrade ozon-agent`. Вместо uv подойдёт `pipx install git+…`.
+
+Ставка налога — `OZON_TAX_RATE` в `.env` (по умолчанию 0.07).
+
+## Расписание на macOS
+
+Шаблон — `launchd/ozon-analytics.plist.example` (1 и 15 числа, окно 30 дней):
+подставьте путь из `which ozon-agent`, скопируйте в `~/Library/LaunchAgents/` и
+загрузите через `launchctl load`.
+
+s.plist.example`.
+
+## Лицензия
+
+MIT

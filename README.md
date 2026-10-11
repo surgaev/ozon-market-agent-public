@@ -1,4 +1,4 @@
-# ozon-market-agent
+# ozon-agent — аналитика продавца Ozon
 
 Агент аналитики для продавца на Ozon. Собирает данные из Seller API и ручных
 выгрузок кабинета и строит Excel-отчёт: сколько реально зарабатывает каждый
@@ -26,25 +26,40 @@ SKU в API нет. Поэтому агент гибридный:
    самый свежий файл по маске.
 2. **Отчёт о реализации** (`/v2/finance/realization`, только закрытые месяцы) —
    продажи и комиссия по API. Продажи, которых ещё нет в выгрузке, показываются
-   жёлтыми строками «API»: без логистики и услуг, т.е. оценка сверху.
+   жёлтыми строками «API»: без логистики и услуг, т.## Установка одной командой
 
-## Установка
-
-```bash
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env                        # Client-Id и Api-Key из кабинета
-cp cost_prices.example.py cost_prices.py    # закупочные цены по offer_id
-```
-
-## Запуск
+Нужен [uv](https://docs.astral.sh/uv/) (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
 
 ```bash
-./run_agent.sh --days 30       # отчёт за последние 30 дней
-python3 run_via_en0.py 30      # то же в обход VPN на macOS (привязка к en0)
+uv tool install git+https://github.com/surgaev/ozon-market-agent-public
+ozon-agent init
 ```
 
-Расписание на macOS — шаблон `launchd/ozon-analytics.plist.example`.
+`init` создаст в `~/.ozon-agent/` два файла:
+
+- `.env` — Client-Id и Api-Key из кабинета (Настройки → Seller API);
+- `cost_prices.csv` — закупочные цены: `offer_id,цена`, можно править в Excel.
+  Префикс покрывает все варианты: `ABC123` → `ABC123-red`, `ABC123-xl`.
+
+Заполните их, скачайте свежий «Отчёт по начислениям» в `~/Downloads` и запускайте:
+
+```bash
+ozon-agent run --days 30    # отчёт за 30 дней по вчера → ~/Downloads/ozon_report_ГГГГ-ММ-ДД.xlsx
+ozon-agent run --en0        # macOS: в обход VPN, если он режет api-seller.ozon.ru
+```
+
+Попробовать без установки: `uvx --from git+https://github.com/surgaev/ozon-market-agent-public ozon-agent init`.
+Обновиться: `uv tool upgrade ozon-agent`. Вместо uv подойдёт `pipx install git+…`.
+
+Ставка налога — `OZON_TAX_RATE` в `.env` (по умолчанию 0.07).
+
+## Расписание на macOS
+
+Шаблон — `launchd/ozon-analytics.plist.example` (1 и 15 числа, окно 30 дней):
+подставьте путь из `which ozon-agent`, скопируйте в `~/Library/LaunchAgents/` и
+загрузите через `launchctl load`.
+
+s.plist.example`.
 
 ## Лицензия
 

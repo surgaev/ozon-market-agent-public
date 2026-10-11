@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ozon-agent"
+version = "0.1.0"
+description = "Аналитика продавца Ozon: юнит-экономика по SKU из начислений и отчёта о реализации, остатки FBO/FBS, возвраты → Excel-отчёт"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "openpyxl>=3.1.2",
+    "beautifulsoup4>=4.12.0",
+    "python-dateutil>=2.8.2",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+]
+
+[project.scripts]
+ozon-agent = "ozon_agent.cli:main"
+
+[project.urls]
+Repository = "https://github.com/surgaev/ozon-market-agent-public"
+
+[tool.setuptools]
+packages = ["ozon_agent"]

@@ -19,8 +19,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-from cost_prices import get_cost_price, TAX_RATE
-from config import RESTOCK_URGENT_DAYS, RESTOCK_SOON_DAYS, RESTOCK_PLAN_DAYS
+from .cost_prices import get_cost_price, TAX_RATE
+from .config import RESTOCK_URGENT_DAYS, RESTOCK_SOON_DAYS, RESTOCK_PLAN_DAYS
 
 
 def _fill_ym_compare(ws, row, oid, ozon_ppu, ym_blend, col_ym, col_diff):

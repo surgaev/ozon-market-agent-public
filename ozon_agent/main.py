@@ -8,6 +8,7 @@ Usage:
     OZON_CLIENT_ID=... OZON_API_KEY=... python main.py [--date YYYY-MM-DD] [--days N]
 """
 
+from .config import DATA_DIR
 import argparse
 import json
 import os
@@ -15,11 +16,9 @@ import sys
 import traceback
 from datetime import date, timedelta
 
-from config import (REPORT_FOLDER, OZON_HEALTH_CSV, DOWNLOADS_DIR,
+from .config import (REPORT_FOLDER, OZON_HEALTH_CSV, DOWNLOADS_DIR,
                     OZON_ACCRUALS_PATTERNS, OZON_RETURNS_PATTERNS, EXCLUDED_SKUS)
-import ozon_client as oc
-
-
+from . import ozon_client as oc
 def _drop_excluded(obj, skus):
     """Убирает снятые с продажи артикулы из входных данных отчёта (та же логика,
     что в yandex-агенте): ключ словаря = offer_id — долой, строки-словари с полем
@@ -41,8 +40,8 @@ def _drop_excluded(obj, skus):
                          for f in ("offer_id", "sku", "shopSku", "offerId")))]
         return set(keep) if isinstance(obj, set) else keep
     return obj
-from report_generator import build_report
-from web_exports import (parse_products_health, parse_accruals_by_product,
+from .report_generator import build_report
+from .web_exports import (parse_products_health, parse_accruals_by_product,
                          parse_returns, find_latest)
 
 
@@ -70,7 +69,7 @@ def _aggregate_econ(unit_econ: dict) -> dict:
 def _get_econ_quarter_cached(run_date, date_from, date_to, product_map, valid_days=7):
     """90-дневная юнит-экономика по offer_id с кэшем на 7 дней (ozon_econ_quarter_cache.json).
     Устойчивая факт-прибыль (без лага выплат). При сбое — пусто (лист покажет «—»)."""
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ozon_econ_quarter_cache.json")
+    path = os.path.join(DATA_DIR, "ozon_econ_quarter_cache.json")
     if os.path.exists(path):
         try:
             c = json.load(open(path, encoding="utf-8"))

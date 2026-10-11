@@ -21,7 +21,7 @@ import time
 import requests
 from datetime import date, timedelta
 from collections import defaultdict
-from config import CLIENT_ID, API_KEY, OZON_API_BASE
+from .config import CLIENT_ID, API_KEY, OZON_API_BASE
 
 
 def _headers():

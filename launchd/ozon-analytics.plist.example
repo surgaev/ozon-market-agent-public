@@ -13,7 +13,9 @@
          21:00, чтобы не пересекаться с вечерним прогоном Яндекса в 20:00. -->
     <key>ProgramArguments</key>
     <array>
-        <string>/ПУТЬ/К/ozon-market-agent/run_agent.sh</string>
+        <!-- путь из `which ozon-agent` после `uv tool install …` -->
+        <string>/Users/you/.local/bin/ozon-agent</string>
+        <string>run</string>
         <string>--days</string>
         <string>30</string>
     </array>
@@ -39,9 +41,9 @@
     </array>
 
     <key>StandardOutPath</key>
-    <string>/ПУТЬ/К/ozon-market-agent/launchd.log</string>
+    <string>/Users/you/.ozon-agent/launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>/ПУТЬ/К/ozon-market-agent/launchd.log</string>
+    <string>/Users/you/.ozon-agent/launchd.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>

@@ -5,6 +5,10 @@ CLIENT_ID = os.environ.get("OZON_CLIENT_ID", "")
 API_KEY   = os.environ.get("OZON_API_KEY", "")
 
 # --- Report output ---
+# Настройки (.env), себестоимости (cost_prices.csv) и кэши — в отдельной папке,
+# а не рядом с кодом: пакет ставится через pip/uv и его папка может быть только для чтения.
+DATA_DIR = os.environ.get("OZON_AGENT_HOME", os.path.expanduser("~/.ozon-agent"))
+os.makedirs(DATA_DIR, exist_ok=True)
 REPORT_FOLDER = os.environ.get("OZON_REPORT_FOLDER", os.path.expanduser("~/Downloads"))
 
 # --- Alert thresholds ---
