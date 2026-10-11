@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.example.ozon-analytics</string>
+
+    <!-- Отчёт по Озону раз в две недели за предыдущие 30 дней.
+         launchd не умеет «каждые 14 дней» как интервал: StartInterval считает от
+         момента загрузки джобы и сбивается после перезагрузки. Поэтому берём 1-е
+         и 15-е число — это и есть «раз в две недели» с привязкой к календарю.
+         21:00, чтобы не пересекаться с вечерним прогоном Яндекса в 20:00. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/ПУТЬ/К/ozon-market-agent/run_agent.sh</string>
+        <string>--days</string>
+        <string>30</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Day</key>
+            <integer>1</integer>
+            <key>Hour</key>
+            <integer>21</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>15</integer>
+            <key>Hour</key>
+            <integer>21</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>/ПУТЬ/К/ozon-market-agent/launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/ПУТЬ/К/ozon-market-agent/launchd.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>
