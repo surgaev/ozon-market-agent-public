@@ -16,3 +16,6 @@ __pycache__/
 *.before_*
 # закупочные цены — коммерческая тайна; шаблон в cost_prices.example.py
 /cost_prices.py
+# артефакты сборки пакета
+build/
+*.egg-info/
