@@ -15,4 +15,4 @@ __pycache__/
 # ручные бэкапы перед правками (история теперь в git)
 *.before_*
 # закупочные цены — коммерческая тайна; шаблон в cost_prices.example.py
-cost_prices.py
+/cost_prices.py
