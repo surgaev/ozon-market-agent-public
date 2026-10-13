@@ -10,6 +10,7 @@
 
 import csv
 import os
+import re
 import glob
 from collections import defaultdict
 
@@ -91,7 +92,22 @@ def _classify_accrual(group: str, otype: str) -> str:
     return "other"
 
 
-def _parse_accruals_long(ws) -> dict:
+def accruals_period(path: str):
+    """Период выгрузки «Отчёт по начислениям» из её первой строки
+    («Период: 21.09.2026-13.10.2026») → (date_from, date_to) или None
+    (старый широкий формат периода не пишет)."""
+    if not path or not os.path.exists(path):
+        return None
+    ws = openpyxl.load_workbook(path, read_only=True, data_only=True).worksheets[0]
+    first = next(ws.iter_rows(max_row=1, values_only=True), (None,))[0]
+    m = re.search(r"(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}\.\d{4})", str(first or ""))
+    if not m:
+        return None
+    from datetime import datetime as _dt
+    return tuple(_dt.strptime(x, "%d.%m.%Y").date() for x in m.groups())
+
+
+def _parse_accruals_long(ws, date_from=None, date_to=None) -> dict:
     """Новый формат Ozon (с ~08.2026): 1 строка = 1 операция, 16 колонок,
     заголовок на 2-й строке (в 1-й — «Период: …»).
 
@@ -106,6 +122,10 @@ def _parse_accruals_long(ws) -> dict:
     skipped = 0.0
     for r in ws.iter_rows(min_row=3, values_only=True):
         if not r or len(r) < 16:
+            continue
+        # Окно отчёта — по дате начисления (кол. 1). Без фильтра в отчёт за 14 дней
+        # попадала бы вся выгрузка (у неё свой период, обычно длиннее).
+        if date_from and hasattr(r[1], "date") and not (date_from <= r[1].date() <= date_to):
             continue
         oid = str(r[4]).strip() if r[4] else ""
         amount = _num(r[15])
@@ -139,7 +159,7 @@ def _parse_accruals_long(ws) -> dict:
     return agg
 
 
-def parse_accruals_by_product(path: str) -> dict:
+def parse_accruals_by_product(path: str, date_from=None, date_to=None) -> dict:
     """
     Выгрузка начислений в разрезе товаров. Поддерживает ДВА формата:
       • старый «широкий» — «Отчет по товарам за период …»: 1 строка = отправление,
@@ -163,7 +183,7 @@ def parse_accruals_by_product(path: str) -> dict:
 
     hdr2 = [str(c.value or "") for c in ws[2]]
     if "Группа услуг" in hdr2 and "Сумма итого, руб." in hdr2:
-        agg = _parse_accruals_long(ws)
+        agg = _parse_accruals_long(ws, date_from, date_to)
         return _finalize_accruals(agg)
 
     rows = list(ws.iter_rows(min_row=2, values_only=True))

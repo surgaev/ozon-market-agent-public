@@ -41,7 +41,7 @@ def _drop_excluded(obj, skus):
         return set(keep) if isinstance(obj, set) else keep
     return obj
 from .report_generator import build_report
-from .web_exports import (parse_products_health, parse_accruals_by_product,
+from .web_exports import (parse_products_health, parse_accruals_by_product, accruals_period,
                          parse_returns, find_latest)
 
 
@@ -169,9 +169,22 @@ def run(run_date: date, days: int = 14):
           + ("✓" if products_health else f"(нет {OZON_HEALTH_CSV})"))
 
     acc_path = find_latest(DOWNLOADS_DIR, OZON_ACCRUALS_PATTERNS)
-    accruals = parse_accruals_by_product(acc_path) if acc_path else {}
+    acc_period = accruals_period(acc_path) if acc_path else None
+    acc_covered = bool(acc_period and acc_period[0] <= date_from and acc_period[1] >= date_to)
+    # Новая выгрузка знает свой период → режем начисления по окну отчёта.
+    # Старый формат периода не пишет — берём целиком, как раньше.
+    accruals = (parse_accruals_by_product(acc_path, date_from, date_to) if acc_period
+                else parse_accruals_by_product(acc_path)) if acc_path else {}
     print(f"   • Начисления по товарам: {len(accruals) or '—'} "
           + (f"✓ ({os.path.basename(acc_path)})" if accruals else "(не найдено)"))
+    if acc_period:
+        print(f"     выгрузка за {acc_period[0]:%d.%m}–{acc_period[1]:%d.%m.%Y}, в отчёт — "
+              f"{date_from:%d.%m}–{date_to:%d.%m}" + ("" if acc_covered else
+              " ⚠️ выгрузка покрывает период НЕ полностью — деньги за часть дней отсутствуют"))
+    if acc_covered:
+        # Реализация помесячная и шире окна: при полном покрытии её «API-строки»
+        # добавили бы продажи вне периода. Нужна только когда выгрузка отстаёт.
+        realization = {"by_offer": {}, "months": realization.get("months", [])}
 
     ret_path = find_latest(DOWNLOADS_DIR, OZON_RETURNS_PATTERNS)
     returns_detail = parse_returns(ret_path) if ret_path else []
@@ -195,6 +208,7 @@ def run(run_date: date, days: int = 14):
         date_to=date_to,
         products_health=products_health,
         accruals=accruals,
+        accruals_info=({"period": acc_period, "covered": acc_covered} if acc_period else None),
         returns_detail=returns_detail,
         econ_quarter=econ_quarter,
         realization=realization,

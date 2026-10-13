@@ -109,7 +109,7 @@ def _delta(today, ref):
 def build_report(run_date, product_map, sales_by_day, stocks, unit_econ,
                  clusters, prices, report_folder, date_from, date_to,
                  products_health=None, accruals=None, returns_detail=None,
-                 econ_quarter=None, realization=None):
+                 econ_quarter=None, realization=None, accruals_info=None):
     os.makedirs(report_folder, exist_ok=True)
     offers = product_map["offers"]
     name_of = lambda oid: offers.get(oid, {}).get("name", oid)
@@ -163,6 +163,16 @@ def build_report(run_date, product_map, sales_by_day, stocks, unit_econ,
         ch_units[s["channel"]] += s["units"]
         ch_revenue[s["channel"]] += s["revenue"]
         ch_net[s["channel"]] += s["net"]
+    # /v3/finance/transaction отключён (09.2026) → unit_econ пуст. Тогда доставки
+    # и выплату берём из выгрузки начислений, иначе на дашборде одни нули.
+    acc_promo = 0.0
+    if not unit_econ["sales"] and accruals:
+        for a in accruals.values():
+            ch = a.get("channel") or "FBS"
+            ch_units[ch] += a.get("qty", 0)
+            ch_revenue[ch] += a.get("revenue", 0)
+            ch_net[ch] += a.get("total", 0)
+            acc_promo += sum(v for n, v in a.get("other_detail", {}).items() if "Звёзд" in n or "родвиж" in n)
     delivered_units = sum(ch_units.values())
     delivered_net = sum(ch_net.values())
 
@@ -179,7 +189,7 @@ def build_report(run_date, product_map, sales_by_day, stocks, unit_econ,
     # продвижение в поиске и т.п.). Ozon не отдаёт рекламу по SKU — только суммой.
     PROMO_KEYS = ("родвиж", "еклам", "Звёзд", "Трафарет", "Премиум", "Promo", "Буст", "буст")
     promo_sum = sum(v for n, v in unit_econ["overhead"].items()
-                    if any(k in n for k in PROMO_KEYS))
+                    if any(k in n for k in PROMO_KEYS)) + acc_promo
     ws.column_dimensions["F"].width = 16
     card(r, 6, "Продвижение (₽)", round(promo_sum),
          sub="промо/реклама (суммарно)", color="B71C1C" if promo_sum < 0 else TEAL)
@@ -300,7 +310,15 @@ def build_report(run_date, product_map, sales_by_day, stocks, unit_econ,
         for x in (returns_detail or []):
             ret_count[x["offer_id"]] += x.get("qty", 1)
         ws3.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncol)
-        ws3["A1"] = ("Факт по начислениям Ozon. СЛЕВА — на 1 штуку, СПРАВА — итог за период по всем "
+        acc_note = ""
+        if accruals_info:
+            p1, p2 = accruals_info["period"]
+            acc_note = (f"ДЕНЬГИ — начисления с {date_from:%d.%m} по {date_to:%d.%m.%Y} (по дате начисления) "
+                        f"из выгрузки за {p1:%d.%m}–{p2:%d.%m.%Y}. "
+                        + ("" if accruals_info["covered"] else
+                           "⚠️ ВЫГРУЗКА ПОКРЫВАЕТ ПЕРИОД НЕ ПОЛНОСТЬЮ — за непокрытые дни денег нет, "
+                           "нужна свежая выгрузка. "))
+        ws3["A1"] = (acc_note + "Факт по начислениям Ozon. СЛЕВА — на 1 штуку, СПРАВА — итог за период по всем "
                      "доставленным штукам. Прибыль/ед = Выплата/ед − Себест. − налог 7%. "
                      "Себестоимость списывается только на ЧИСТЫЕ штуки (выкуплено − возвращено): "
                      "возврат приезжает годным на склад, товар не потерян, его реальная цена — "
